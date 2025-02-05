@@ -8,6 +8,7 @@ import os
 import tempfile
 import time
 from dotenv import load_dotenv
+from alertNotificationWirepusher import send_wirepusher_notification
 
 # Configurações do Custom Vision
 load_dotenv()
@@ -17,22 +18,7 @@ PREDICTION_KEY = os.environ.get('PREDICTION_KEY')
 PROJECT_ID_DETECTION = os.environ.get('PROJECT_ID_DETECTION')
 ITERATION_NAME = os.environ.get('ITERATION_NAME')
 PREDICTION_URL = f"{ENDPOINT}customvision/v3.0/Prediction/{PROJECT_ID_DETECTION}/detect/iterations/{ITERATION_NAME}/image"
-VERSAO_DO_APP = "v1.15 (Azure Custom Vision)"
-
-# Função para enviar notificação WirePusher
-def send_wirepusher_notification(device_id, title, message, category):
-    url = "https://wirepusher.com/send"
-    payload = {
-        "id": device_id,
-        "title": title,
-        "message": message,
-        "type": category
-    }
-    response = requests.get(url, params=payload)
-    if response.status_code == 200:
-        print("Notificação enviada com sucesso!")
-    else:
-        print(f"Erro ao enviar: {response.status_code} - {response.text}")
+VERSAO_DO_APP = "v1.16 (Azure Custom Vision)"
 
 def get_prediction(image_data):
     headers = {"Prediction-Key": PREDICTION_KEY, "Content-Type": "application/octet-stream"}
@@ -46,7 +32,7 @@ def draw_boxes_on_frame(frame, predictions, threshold=60):
     # Cria uma cópia da imagem para desenhar as caixas
     draw_image = frame.copy()
     draw = ImageDraw.Draw(draw_image)
-    font_size = max(10, int(min(frame.width, frame.height) * 0.08))
+    font_size = max(10, int(min(frame.width, frame.height) * 0.06))
     font = ImageFont.truetype("arial.ttf", size=font_size)
 
     for prediction in predictions:
@@ -151,13 +137,7 @@ if uploaded_file:
         processed_image, detected = process_frame(image_np, confidence_threshold)
         st.image(processed_image, caption="Imagem Processada", use_container_width=False)
         if detected and device_id:
-            send_wirepusher_notification(
-                device_id=device_id,
-                title="Alerta Crítico",
-                message="Objeto cortante detectado na imagem!",
-                category="alerta"
-            )
-            st.success(f"Notificação enviada para o Device: **{device_id}**")
+            send_wirepusher_notification(device_id, "na imagem!")
     
     elif file_extension == "mp4":
         if "cancel_processing" not in st.session_state:
@@ -237,10 +217,4 @@ if uploaded_file:
 
         # Envia notificação ao final do processamento, se houve detecção e o Device ID foi fornecido
         if detected_in_video and device_id:
-            send_wirepusher_notification(
-                device_id=device_id,
-                title="Alerta Crítico",
-                message="Objeto cortante detectado no vídeo!",
-                category="alerta"
-            )
-            st.success(f"Notificação enviada para o Device: **{device_id}**")
+            send_wirepusher_notification(device_id, "no vídeo!")
